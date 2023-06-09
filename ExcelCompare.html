@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Excel File Comparison</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Excel File Comparison</h1>
+      <form>
+        <div class="form-group">
+          <label for="file1">Select file 1:</label>
+          <input type="file" class="form-control-file" id="file1" name="file1" />
+        </div>
+
+        <div class="form-group">
+          <label for="file2">Select file 2:</label>
+          <input type="file" class="form-control-file" id="file2" name="file2" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Compare</button>
+      </form>
+
+      <div id="result" class="mt-4"></div>
+    </div>
+
+    <script>
+      function handleFormSubmit(event) {
+        event.preventDefault(); // Prevent form submission
+
+        const file1 = document.getElementById("file1").files[0];
+        const file2 = document.getElementById("file2").files[0];
+
+        console.log("File1:", file1);
+        console.log("File2:", file2);
+
+        if (file1 && file2) {
+          const reader1 = new FileReader();
+          const reader2 = new FileReader();
+
+          reader1.onload = function (e) {
+            console.log("File1 read complete");
+            const workbook1 = XLSX.read(e.target.result, {
+              type: "binary",
+            });
+            const sheetNames = workbook1.SheetNames;
+            if (sheetNames.length > 1) {
+              // If there is more than one sheet, remove the first sheet
+              delete workbook1.Sheets[sheetNames[0]];
+              sheetNames.shift(); // Remove the first sheet name from the array
+            }
+            const sheet1 = workbook1.Sheets[sheetNames[0]];
+            const data1 = XLSX.utils.sheet_to_json(sheet1);
+
+            reader2.onload = function (e) {
+              console.log("File2 read complete");
+              const workbook2 = XLSX.read(e.target.result, {
+                type: "binary",
+              });
+              const sheet2 = workbook2.Sheets[workbook2.SheetNames[0]];
+              const data2 = XLSX.utils.sheet_to_json(sheet2);
+
+              // Compare mobile numbers and Plan column and store matching ones
+              const matchingEntries = [];
+              for (let i = 0; i < data1.length; i++) {
+                const mobileNumber1 = data1[i]["Mobile No."];
+                const plan1 = data1[i]["Plan"];
+
+                for (let j = 0; j < data2.length; j++) {
+                  const mobileNumber2 = data2[j]["Mobile No."];
+                  const plan2 = data2[j]["Plan"];
+
+                  if (mobileNumber1 === mobileNumber2 && plan1 === plan2) {
+                    matchingEntries.push({ mobileNumber: mobileNumber1, plan: plan1 });
+                    break; // Break the inner loop if a match is found
+                  }
+                }
+              }
+
+              console.log("Matching entries:", matchingEntries);
+
+              // Display the matching entries
+              const totalCount = matchingEntries.length;
+              if (totalCount > 0) {
+                const resultElement = document.getElementById("result");
+                resultElement.innerHTML = `
+                  <h3>Matching Entries:</h3>
+                  <p>Total Count: ${totalCount}</p>
+                  <ul>${matchingEntries.map((entry) => `<li>Mobile Number: ${entry.mobileNumber}, Plan: ${entry.plan}</li>`).join("")}</ul>
+                `;
+                console.log("Displaying matching entries:", matchingEntries);
+              }
+            };
+
+            reader2.readAsBinaryString(file2);
+          };
+
+          reader1.readAsBinaryString(file1);
+        }
+      }
+
+      const form = document.querySelector("form");
+      form.addEventListener("submit", handleFormSubmit);
+    </script>
+  </body>
+</html>
